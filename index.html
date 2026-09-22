@@ -3,14 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <title>OWASP LLM Top 10 Cloud Security Graph</title>
-  <!-- Load Neovis.js directly from CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.1.0/dist/neovis.js"></script>
+  <!-- Updated reliable CDN bundle for Neovis v2 -->
+  <script src="https://unpkg.com/neovis.js@2.1.0/dist/neovis.js"></script>
   <style>
     body {
       margin: 0;
       padding: 0;
-      overflow: hidden;
       background-color: #1a1a1a;
+      color: #ffffff;
+      font-family: sans-serif;
     }
     #viz {
       width: 100vw;
@@ -22,6 +23,9 @@
   <div id="viz"></div>
 
   <script>
+    // Safely check for either NeoVis or Neovis global object
+    const NeoVisConstructor = window.NeoVis || window.Neovis;
+
     const config = {
       containerId: "viz",
       neo4j: {
@@ -30,41 +34,23 @@
         serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
       },
       labels: {
-        Vulnerability: {
-          label: "code",
-          caption: "name"
-        },
-        EntryPoint: {
-          label: "name"
-        },
-        CloudProvider: {
-          label: "name"
-        },
-        CloudService: {
-          label: "name"
-        },
-        Feature: {
-          label: "name"
-        }
+        Vulnerability: { label: "code", caption: "name" },
+        EntryPoint: { label: "name" },
+        CloudProvider: { label: "name" },
+        CloudService: { label: "name" },
+        Feature: { label: "name" }
       },
       relationships: {
-        EXPOSED_VIA: {
-          caption: false
-        },
-        MANIFESTS_IN: {
-          caption: false
-        },
-        FEATURE_OF: {
-          caption: false
-        },
-        PROVIDED_BY: {
-          caption: false
-        }
+        EXPOSED_VIA: { caption: false },
+        MANIFESTS_IN: { caption: false },
+        FEATURE_OF: { caption: false },
+        PROVIDED_BY: { caption: false }
       },
       initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 500"
     };
 
-    const viz = new Neovis.js(config);
+    // Instantiate using the correct capital NeoVis constructor
+    const viz = new NeoVisConstructor(config);
     viz.render();
   </script>
 </body>
