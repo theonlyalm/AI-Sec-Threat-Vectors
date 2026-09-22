@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OWASP LLM Top 10 Cloud Security Graph</title>
-  <!-- Updated reliable CDN bundle for Neovis v2 -->
-  <script src="https://unpkg.com/neovis.js@2.1.0/dist/neovis.js"></script>
+  <title>OWASP LLM Top 10 Security Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.1.0/dist/neovis.js"></script>
   <style>
     body {
       margin: 0;
@@ -17,41 +16,84 @@
       width: 100vw;
       height: 100vh;
     }
+    #status {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      z-index: 10;
+      background: rgba(0,0,0,0.85);
+      padding: 12px 18px;
+      border-radius: 6px;
+      border: 1px solid #444;
+      font-size: 14px;
+    }
   </style>
 </head>
 <body>
+  <div id="status">Connecting to Neo4j...</div>
   <div id="viz"></div>
 
   <script>
-    // Safely check for either NeoVis or Neovis global object
-    const NeoVisConstructor = window.NeoVis || window.Neovis;
+    const statusEl = document.getElementById("status");
 
-    const config = {
-      containerId: "viz",
-      neo4j: {
-        serverUrl: "neo4j+s://e055a0f8.databases.neo4j.io",
-        serverUser: "neo4j",
-        serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
-      },
-      labels: {
-        Vulnerability: { label: "code", caption: "name" },
-        EntryPoint: { label: "name" },
-        CloudProvider: { label: "name" },
-        CloudService: { label: "name" },
-        Feature: { label: "name" }
-      },
-      relationships: {
-        EXPOSED_VIA: { caption: false },
-        MANIFESTS_IN: { caption: false },
-        FEATURE_OF: { caption: false },
-        PROVIDED_BY: { caption: false }
-      },
-      initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 500"
-    };
+    // Resolve UMD bundle constructor variations in Neovis v2
+    function getNeovisClass() {
+      if (typeof window.NeoVis !== "undefined") {
+        return window.NeoVis.default || window.NeoVis.NeoVis || window.NeoVis;
+      }
+      if (typeof window.Neovis !== "undefined") {
+        return window.Neovis.default || window.Neovis.Neovis || window.Neovis;
+      }
+      return null;
+    }
 
-    // Instantiate using the correct capital NeoVis constructor
-    const viz = new NeoVisConstructor(config);
-    viz.render();
+    const NeoVisClass = getNeovisClass();
+
+    if (!NeoVisClass) {
+      statusEl.style.color = "#ff6b6b";
+      statusEl.innerHTML = "<strong>Error:</strong> Failed to load Neovis library from CDN.";
+    } else {
+      const config = {
+        containerId: "viz",
+        neo4j: {
+          serverUrl: "neo4j+s://e055a0f8.databases.neo4j.io",
+          serverUser: "neo4j",
+          serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
+        },
+        labels: {
+          Vulnerability: { label: "code", caption: "name" },
+          EntryPoint: { label: "name" },
+          CloudProvider: { label: "name" },
+          CloudService: { label: "name" },
+          Feature: { label: "name" }
+        },
+        relationships: {
+          EXPOSED_VIA: { caption: false },
+          MANIFESTS_IN: { caption: false },
+          FEATURE_OF: { caption: false },
+          PROVIDED_BY: { caption: false }
+        },
+        initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 300"
+      };
+
+      try {
+        const viz = new NeoVisClass(config);
+
+        viz.registerOnEvent("completed", () => {
+          statusEl.style.display = "none";
+        });
+
+        viz.registerOnEvent("error", (error) => {
+          statusEl.style.color = "#ff6b6b";
+          statusEl.innerHTML = `<strong>Neo4j Connection Error:</strong><br>${error}`;
+        });
+
+        viz.render();
+      } catch (err) {
+        statusEl.style.color = "#ff6b6b";
+        statusEl.innerHTML = `<strong>Initialization Error:</strong> ${err.message}`;
+      }
+    }
   </script>
 </body>
 </html>
