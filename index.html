@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Interactive Graph View</title>
+  <!-- Load Neovis.js directly from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.1.0/dist/neovis.js"></script>
+  <style>
+    #viz { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="viz"></div>
+
+  <script>
+    const config = {
+      containerId: "viz",
+      neo4j: {
+        serverUrl: "neo4j+s://e055a0f8.databases.neo4j.io",
+        serverUser: "neo4j",
+        serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
+      },
+      labels: {
+        // Map node properties to visual labels
+        Person: {
+          label: "name"
+        }
+      },
+      relationships: {
+        KNOWS: {
+          caption: false
+        }
+      },
+      initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 100"
+    };
+
+    const viz = new Neovis.js(config);
+    viz.render();
+  </script>
+</body>
+</html>
