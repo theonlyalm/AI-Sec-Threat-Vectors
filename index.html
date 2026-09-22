@@ -2,8 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>OWASP LLM Top 10 Security Graph</title>
-  <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.1.0/dist/neovis.js"></script>
+  <title>OWASP LLM Security Graph</title>
+  <!-- Official Neo4j Browser Driver -->
+  <script src="https://cdn.jsdelivr.net/npm/neo4j-driver@5.12.0/lib/browser/neo4j-web.min.js"></script>
+  <!-- Vis Network Graph Visualizer -->
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <style>
     body {
       margin: 0;
@@ -25,7 +28,6 @@
       padding: 12px 18px;
       border-radius: 6px;
       border: 1px solid #444;
-      font-size: 14px;
     }
   </style>
 </head>
@@ -36,64 +38,87 @@
   <script>
     const statusEl = document.getElementById("status");
 
-    // Resolve UMD bundle constructor variations in Neovis v2
-    function getNeovisClass() {
-      if (typeof window.NeoVis !== "undefined") {
-        return window.NeoVis.default || window.NeoVis.NeoVis || window.NeoVis;
-      }
-      if (typeof window.Neovis !== "undefined") {
-        return window.Neovis.default || window.Neovis.Neovis || window.Neovis;
-      }
-      return null;
-    }
+    // 1. Initialize Neo4j Driver
+    const driver = neo4j.driver(
+      "neo4j+s://e055a0f8.databases.neo4j.io",
+      neo4j.auth.basic("neo4j", "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk")
+    );
 
-    const NeoVisClass = getNeovisClass();
-
-    if (!NeoVisClass) {
-      statusEl.style.color = "#ff6b6b";
-      statusEl.innerHTML = "<strong>Error:</strong> Failed to load Neovis library from CDN.";
-    } else {
-      const config = {
-        containerId: "viz",
-        neo4j: {
-          serverUrl: "neo4j+s://e055a0f8.databases.neo4j.io",
-          serverUser: "neo4j",
-          serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
-        },
-        labels: {
-          Vulnerability: { label: "code", caption: "name" },
-          EntryPoint: { label: "name" },
-          CloudProvider: { label: "name" },
-          CloudService: { label: "name" },
-          Feature: { label: "name" }
-        },
-        relationships: {
-          EXPOSED_VIA: { caption: false },
-          MANIFESTS_IN: { caption: false },
-          FEATURE_OF: { caption: false },
-          PROVIDED_BY: { caption: false }
-        },
-        initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 300"
-      };
-
+    async function loadGraph() {
+      const session = driver.session();
       try {
-        const viz = new NeoVisClass(config);
+        const result = await session.run("MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 400");
+        
+        const nodesMap = new Map();
+        const edges = [];
 
-        viz.registerOnEvent("completed", () => {
-          statusEl.style.display = "none";
+        result.records.forEach(record => {
+          const n = record.get('n');
+          const m = record.get('m');
+          const r = record.get('r');
+
+          [n, m].forEach(node => {
+            const nodeId = node.identity.toString();
+            if (!nodesMap.has(nodeId)) {
+              const category = node.labels[0] || 'Node';
+              const displayLabel = node.properties.code || node.properties.name || category;
+              nodesMap.set(nodeId, {
+                id: nodeId,
+                label: displayLabel,
+                group: category,
+                title: JSON.stringify(node.properties, null, 2)
+              });
+            }
+          });
+
+          edges.push({
+            from: r.start.toString(),
+            to: r.end.toString(),
+            label: r.type,
+            arrows: 'to'
+          });
         });
 
-        viz.registerOnEvent("error", (error) => {
-          statusEl.style.color = "#ff6b6b";
-          statusEl.innerHTML = `<strong>Neo4j Connection Error:</strong><br>${error}`;
-        });
+        if (nodesMap.size === 0) {
+          statusEl.style.color = "#ffb74d";
+          statusEl.innerHTML = "Connected successfully, but 0 nodes were found in the database.";
+          return;
+        }
 
-        viz.render();
+        // 2. Render Graph with Vis-Network
+        const container = document.getElementById('viz');
+        const data = {
+          nodes: Array.from(nodesMap.values()),
+          edges: edges
+        };
+        const options = {
+          nodes: {
+            shape: 'dot',
+            size: 20,
+            font: { color: '#ffffff', size: 14 }
+          },
+          edges: {
+            font: { color: '#aaaaaa', size: 10, align: 'middle' },
+            color: { color: '#555555' }
+          },
+          physics: {
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: { gravitationalConstant: -50 }
+          }
+        };
+
+        new vis.Network(container, data, options);
+        statusEl.style.display = 'none';
+
       } catch (err) {
         statusEl.style.color = "#ff6b6b";
-        statusEl.innerHTML = `<strong>Initialization Error:</strong> ${err.message}`;
+        statusEl.innerHTML = `<strong>Database Error:</strong> ${err.message}`;
+      } finally {
+        await session.close();
       }
     }
+
+    loadGraph();
   </script>
 </body>
 </html>
