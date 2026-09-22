@@ -2,11 +2,20 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Interactive Graph View</title>
+  <title>OWASP LLM Top 10 Cloud Security Graph</title>
   <!-- Load Neovis.js directly from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/neovis.js@2.1.0/dist/neovis.js"></script>
   <style>
-    #viz { width: 100vw; height: 100vh; }
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #1a1a1a;
+    }
+    #viz {
+      width: 100vw;
+      height: 100vh;
+    }
   </style>
 </head>
 <body>
@@ -21,17 +30,38 @@
         serverPassword: "hQNrOYYvov-U2R0SXKHBI4-XGSnjzXm1kzu3ZFKSzgk"
       },
       labels: {
-        // Map node properties to visual labels
-        Person: {
+        Vulnerability: {
+          label: "code",
+          caption: "name"
+        },
+        EntryPoint: {
+          label: "name"
+        },
+        CloudProvider: {
+          label: "name"
+        },
+        CloudService: {
+          label: "name"
+        },
+        Feature: {
           label: "name"
         }
       },
       relationships: {
-        KNOWS: {
+        EXPOSED_VIA: {
+          caption: false
+        },
+        MANIFESTS_IN: {
+          caption: false
+        },
+        FEATURE_OF: {
+          caption: false
+        },
+        PROVIDED_BY: {
           caption: false
         }
       },
-      initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 100"
+      initialQuery: "MATCH (n)-[r]->(m) RETURN n, r, m LIMIT 500"
     };
 
     const viz = new Neovis.js(config);
